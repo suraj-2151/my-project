@@ -1,0 +1,17 @@
+{
+	"name": "pr-DataF",
+	"properties": {
+		"globalParameters": {
+			"env": {
+				"type": "string",
+				"value": "dev"
+			}
+		}
+	},
+	"location": "centralus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "10368c5e-d55e-4ec4-9d1d-2c595140b7a5",
+		"tenantId": "d4a05a73-298d-4a89-a915-4aac3f6ef170"
+	}
+}

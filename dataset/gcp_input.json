@@ -1,0 +1,45 @@
+{
+	"name": "gcp_input",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "projectGoogleCloudStorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"bucket": {
+				"type": "string"
+			},
+			"folder": {
+				"type": "string"
+			},
+			"file": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "GoogleCloudStorageLocation",
+				"bucketName": {
+					"value": "@dataset().bucket",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().folder",
+					"type": "Expression"
+				},
+				"fileName": {
+					"value": "@dataset().file",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

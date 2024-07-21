@@ -1,0 +1,171 @@
+{
+	"name": "01c dim raw to intermediate",
+	"properties": {
+		"activities": [
+			{
+				"name": "raw to intermediate",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/databricks_notebooks/dim_raw_to_intermediate",
+					"baseParameters": {
+						"gcp_file_last_modified_time": {
+							"value": "@pipeline().parameters.source_file_last_modified",
+							"type": "Expression"
+						},
+						"raw_schema": {
+							"value": "@pipeline().parameters.metadata_lookup_values.raw_schema",
+							"type": "Expression"
+						},
+						"raw_table": {
+							"value": "@pipeline().parameters.metadata_lookup_values.raw_tbl",
+							"type": "Expression"
+						},
+						"intermediate_schema": {
+							"value": "@pipeline().parameters.metadata_lookup_values.intermediate_schema",
+							"type": "Expression"
+						},
+						"intermediate_table": {
+							"value": "@pipeline().parameters.metadata_lookup_values.intermediate_tbl",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureDatabricks1",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "raw to intermediate success log",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "raw to intermediate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+					"baseParameters": {
+						"env": {
+							"value": "@pipeline().globalParameters.env",
+							"type": "Expression"
+						},
+						"loadId": {
+							"value": "@pipeline()?.TriggeredByPipelineRunId",
+							"type": "Expression"
+						},
+						"logMessage": {
+							"value": "@concat('copied file ',activity('raw to intermediate').output.runOutput[1],' to intermediate container out of ',activity('raw to intermediate').output.runOutput[0],' files from raw.')",
+							"type": "Expression"
+						},
+						"logTimeStamp": {
+							"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+							"type": "Expression"
+						},
+						"pipeLineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"status": "Success",
+						"triggerType": {
+							"value": "@pipeline().TriggerType",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureDatabricks1",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "raw to intermediate failure log",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "raw to intermediate",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+					"baseParameters": {
+						"env": {
+							"value": "@pipeline().globalParameters.env",
+							"type": "Expression"
+						},
+						"loadId": {
+							"value": "@pipeline()?.TriggeredByPipelineRunId",
+							"type": "Expression"
+						},
+						"logMessage": {
+							"value": "@activity('raw to intermediate').Error.message",
+							"type": "Expression"
+						},
+						"logTimeStamp": {
+							"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+							"type": "Expression"
+						},
+						"pipeLineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"status": "failure",
+						"triggerType": {
+							"value": "@pipeline().TriggerType",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureDatabricks1",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"metadata_lookup_values": {
+				"type": "object"
+			},
+			"source_file_last_modified": {
+				"type": "string"
+			},
+			"source_file_name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-07-21T18:00:11Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

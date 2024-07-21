@@ -1,0 +1,922 @@
+{
+	"name": "02a fact gcp to landing",
+	"properties": {
+		"activities": [
+			{
+				"name": "metadata-Lookup",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureDatabricksDeltaLakeSource",
+						"query": {
+							"value": "@concat('select * from metadata_schema.tbl_parameters,metadata_schema.tbl_source_control where job_id = ',pipeline().parameters.job_id)",
+							"type": "Expression"
+						}
+					},
+					"dataset": {
+						"referenceName": "AzureDatabricksDeltaLakeDataset1",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Get source file names",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "metadata-Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "gcp_input",
+						"type": "DatasetReference",
+						"parameters": {
+							"bucket": {
+								"value": "@activity('metadata-Lookup').output.firstRow.gcp_source_bucket",
+								"type": "Expression"
+							},
+							"folder": {
+								"value": "@activity('metadata-Lookup').output.firstRow.source_file_path",
+								"type": "Expression"
+							},
+							"file": "*"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "GoogleCloudStorageReadSettings",
+						"recursive": true,
+						"modifiedDatetimeStart": {
+							"value": "@convertToUtc(activity('metadata-Lookup').output.firstRow.watermark_column,'India Standard Time')",
+							"type": "Expression"
+						},
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "file count check",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Get source file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(length(activity('Get source file names').output.childItems),0)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "no latest files are available to ingest",
+							"type": "DatabricksNotebook",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"loadId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"logMessage": {
+										"value": "no latest files are available to ingest ",
+										"type": "Expression"
+									},
+									"logTimeStamp": {
+										"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+										"type": "Expression"
+									},
+									"pipeLineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"status": "failure",
+									"triggerType": {
+										"value": "@pipeline().TriggerType",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "end pipeline as no files are availbale",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "no latest files are available to ingest",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "no latest files are available to ingest ",
+								"errorCode": "no latest files are available to ingest "
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "formate check",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "file count check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get source file names').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(startswith(item().name,'telecom_fact' ),endswith(item().name,'csv'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "proper format count check",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "formate check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(length(activity('formate check').output.Value),0)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "no proper format  files are available to ingest _copy1",
+							"type": "DatabricksNotebook",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"loadId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"logMessage": {
+										"value": "no latest files with proper format are available to ingest ",
+										"type": "Expression"
+									},
+									"logTimeStamp": {
+										"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+										"type": "Expression"
+									},
+									"pipeLineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"status": "failure",
+									"triggerType": {
+										"value": "@pipeline().TriggerType",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "end pipeline as no files are availbale_copy1",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "no proper format  files are available to ingest _copy1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "no latest files with proper format are available to ingest ",
+								"errorCode": "no latest files with proper format are available to ingest "
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ForEach source files",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "proper format count check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('formate check').output.Value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Get GCP last modified date",
+							"type": "GetMetadata",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "gcp_input",
+									"type": "DatasetReference",
+									"parameters": {
+										"bucket": {
+											"value": "@activity('metadata-Lookup').output.firstRow.gcp_source_bucket",
+											"type": "Expression"
+										},
+										"folder": {
+											"value": "@activity('metadata-Lookup').output.firstRow.source_file_path",
+											"type": "Expression"
+										},
+										"file": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"lastModified"
+								],
+								"storeSettings": {
+									"type": "GoogleCloudStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							}
+						},
+						{
+							"name": "Copy gcp to landing",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Get GCP last modified date",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "GoogleCloudStorageReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".csv"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "gcp_input",
+									"type": "DatasetReference",
+									"parameters": {
+										"bucket": {
+											"value": "@activity('metadata-Lookup').output.firstRow.gcp_source_bucket",
+											"type": "Expression"
+										},
+										"folder": {
+											"value": "@activity('metadata-Lookup').output.firstRow.source_file_path",
+											"type": "Expression"
+										},
+										"file": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "output",
+									"type": "DatasetReference",
+									"parameters": {
+										"adls_container": {
+											"value": "@activity('metadata-Lookup').output.firstRow.container_name",
+											"type": "Expression"
+										},
+										"adls_file": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "file copy success log",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "Copy gcp to landing",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"loadId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"logMessage": {
+										"value": "@concat('copied file ',item().name,' to landing container.')",
+										"type": "Expression"
+									},
+									"logTimeStamp": {
+										"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+										"type": "Expression"
+									},
+									"pipeLineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"status": "Success",
+									"triggerType": {
+										"value": "@pipeline().TriggerType",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "file copy failure log",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "Copy gcp to landing",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"loadId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"logMessage": {
+										"value": "@activity('Copy gcp to landing').Error.message",
+										"type": "Expression"
+									},
+									"logTimeStamp": {
+										"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+										"type": "Expression"
+									},
+									"pipeLineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"status": "failure",
+									"triggerType": {
+										"value": "@pipeline().TriggerType",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "watermark column update",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "Execute Pipeline 02c fact  raw to intermediate",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/dbx_update_watermark_column",
+								"baseParameters": {
+									"gcp_file_last_modified_time": {
+										"value": "@convertFromUtc(addSeconds(activity('Get GCP last modified date').output.lastModified,1),'India Standard Time','yyyy-MM-dd HH:mm:ss')",
+										"type": "Expression"
+									},
+									"job_id": {
+										"value": "@pipeline().parameters.job_id",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Execute Pipeline 02b fact landing to raw",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Copy gcp to landing",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "02b fact landing to raw",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"metadata_lookup_values": {
+										"value": "@activity('metadata-Lookup').output.firstRow",
+										"type": "Expression"
+									},
+									"source_file_last_modified": {
+										"value": "@activity('Get GCP last modified date').output.lastModified",
+										"type": "Expression"
+									},
+									"source_file_name": {
+										"value": "@item().name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "watermark update success log",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "watermark column update",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"loadId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"logMessage": {
+										"value": "@concat('successfully updated watermark column for ',item().name,' on ',convertFromUtc(addSeconds(activity('Get GCP last modified date').output.lastModified,1),'India Standard Time','yyyy-MM-dd HH:mm:ss') )",
+										"type": "Expression"
+									},
+									"logTimeStamp": {
+										"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+										"type": "Expression"
+									},
+									"pipeLineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"status": "Success",
+									"triggerType": {
+										"value": "@pipeline().TriggerType",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "watermark update failure log",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "watermark column update",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"loadId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"logMessage": {
+										"value": "@activity('watermark column update').Error.message",
+										"type": "Expression"
+									},
+									"logTimeStamp": {
+										"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+										"type": "Expression"
+									},
+									"pipeLineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"status": "failure",
+									"triggerType": {
+										"value": "@pipeline().TriggerType",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "archive source files",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "Execute Pipeline 02b fact landing to raw",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/archive_source_files",
+								"baseParameters": {
+									"loadId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"container": {
+										"value": "@activity('metadata-Lookup').output.firstRow.container_name",
+										"type": "Expression"
+									},
+									"source_file_name": {
+										"value": "@item().name",
+										"type": "Expression"
+									},
+									"storage_account_name": {
+										"value": "@activity('metadata-Lookup').output.firstRow.storage_account",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "archiving sucess log",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "archive source files",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"loadId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"logMessage": {
+										"value": "@concat('successfully archived ',item().name)",
+										"type": "Expression"
+									},
+									"logTimeStamp": {
+										"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+										"type": "Expression"
+									},
+									"pipeLineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"status": "Success",
+									"triggerType": {
+										"value": "@pipeline().TriggerType",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "archiving failure log",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "archive source files",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/databricks_notebooks/log_record_tbl_insert",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"loadId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"logMessage": {
+										"value": "@activity('archive source files').Error.message",
+										"type": "Expression"
+									},
+									"logTimeStamp": {
+										"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+										"type": "Expression"
+									},
+									"pipeLineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"status": "failure",
+									"triggerType": {
+										"value": "@pipeline().TriggerType",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks1",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Execute Pipeline 02c fact  raw to intermediate",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Execute Pipeline 02b fact landing to raw",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "02c fact raw to intermediate",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"metadata_lookup_values": {
+										"value": "@activity('metadata-Lookup').output.firstRow",
+										"type": "Expression"
+									},
+									"source_file_last_modified": {
+										"value": "@activity('Get GCP last modified date').output.lastModified",
+										"type": "Expression"
+									},
+									"source_file_name": {
+										"value": "@item().name",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"job_id": {
+				"type": "string",
+				"defaultValue": "204"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-07-21T18:00:13Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
