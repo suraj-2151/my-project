@@ -1,0 +1,45 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "pr-DataF"
+		},
+		"GoogleCloudStorage1_secretAccessKey": {
+			"value": ""
+		},
+		"Sftp1_password": {
+			"value": ""
+		},
+		"projectGoogleCloudStorage_secretAccessKey": {
+			"value": ""
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"value": "https://pro00store.dfs.core.windows.net/"
+		},
+		"AzureDatabricks1_properties_typeProperties_existingClusterId": {
+			"value": "0630-064602-xd37uspj"
+		},
+		"AzureKeyVault1_properties_typeProperties_baseUrl": {
+			"value": "https://keyv-project.vault.azure.net/"
+		},
+		"GoogleCloudStorage1_properties_typeProperties_accessKeyId": {
+			"value": "GOOG4KDL5R2U2MZAE73SS5DS"
+		},
+		"Sftp1_properties_typeProperties_host": {
+			"value": "192.168.137.1"
+		},
+		"Sftp1_properties_typeProperties_userName": {
+			"value": "Suraj"
+		},
+		"projectGoogleCloudStorage_properties_typeProperties_accessKeyId": {
+			"value": "GOOG1EIGQJDXGJXLPDBQRKZXJJDTTN7M65NHYCLOCDCIJFV3V52LUXDXLEUGK"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
