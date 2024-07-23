@@ -953,7 +953,7 @@
 				"typeProperties": {
 					"method": "POST",
 					"url": {
-						"value": "@activity('metadata-Lookup').output.firstRow.logic_app_url",
+						"value": "https://prod-173.westeurope.logic.azure.com:443/workflows/3fa30e8633004f2381b4deed297b8a6b/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=AhdjEJiyL4TCp5QwTulBA9Yp3Rtd2zDI4M4eQ2J_4i8",
 						"type": "Expression"
 					},
 					"body": {
