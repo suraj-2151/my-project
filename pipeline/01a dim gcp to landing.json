@@ -916,7 +916,14 @@
 					"secureOutput": false,
 					"secureInput": false
 				},
-				"userProperties": []
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "time",
+					"value": {
+						"value": "@convertFromUtc(utcNow(),'India Standard Time' ,'yyyy-MM-dd HH:mm:ss' )",
+						"type": "Expression"
+					}
+				}
 			},
 			{
 				"name": "Web1",
@@ -942,13 +949,29 @@
 					"secureOutput": false,
 					"secureInput": false
 				},
-				"userProperties": []
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": {
+						"value": "@activity('metadata-Lookup').output.firstRow.logic_app_url",
+						"type": "Expression"
+					},
+					"body": {
+						"value": "{\n    \"to\":\"sj19940929@gmail.com\",\n    \"subject\":\"pipeline run mail\",\n    \"email_body\":\"pipeline is running\"\n}",
+						"type": "Expression"
+					}
+				}
 			}
 		],
 		"parameters": {
 			"job_id": {
 				"type": "string",
 				"defaultValue": "201"
+			}
+		},
+		"variables": {
+			"time": {
+				"type": "String"
 			}
 		},
 		"annotations": [],
