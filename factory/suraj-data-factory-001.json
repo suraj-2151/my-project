@@ -1,0 +1,9 @@
+{
+	"name": "suraj-data-factory-001",
+	"location": "centralus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "ac2f70ad-22e6-4e0c-a50f-eb90b44aa6ef",
+		"tenantId": "21d25146-14a8-4d3e-b819-7d8ccfc82963"
+	}
+}
