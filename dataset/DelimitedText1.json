@@ -11,6 +11,7 @@
 			"location": {
 				"type": "AzureBlobFSLocation",
 				"fileName": "flipkart_smartphones.csv",
+				"folderPath": "av",
 				"fileSystem": "target"
 			},
 			"columnDelimiter": ",",
