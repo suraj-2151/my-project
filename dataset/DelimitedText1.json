@@ -1,0 +1,88 @@
+{
+	"name": "DelimitedText1",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorage1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "flipkart_smartphones.csv",
+				"fileSystem": "target"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "brand",
+				"type": "String"
+			},
+			{
+				"name": "model",
+				"type": "String"
+			},
+			{
+				"name": "colour",
+				"type": "String"
+			},
+			{
+				"name": "original_price",
+				"type": "String"
+			},
+			{
+				"name": "discounted_price",
+				"type": "String"
+			},
+			{
+				"name": "ratings",
+				"type": "String"
+			},
+			{
+				"name": "rating_count",
+				"type": "String"
+			},
+			{
+				"name": "reviews",
+				"type": "String"
+			},
+			{
+				"name": "memory",
+				"type": "String"
+			},
+			{
+				"name": "storage",
+				"type": "String"
+			},
+			{
+				"name": "processor",
+				"type": "String"
+			},
+			{
+				"name": "rear_camera",
+				"type": "String"
+			},
+			{
+				"name": "front_camera",
+				"type": "String"
+			},
+			{
+				"name": "display_size",
+				"type": "String"
+			},
+			{
+				"name": "battery_capacity",
+				"type": "String"
+			},
+			{
+				"name": "battery_type",
+				"type": "String"
+			}
+		]
+	}
+}
