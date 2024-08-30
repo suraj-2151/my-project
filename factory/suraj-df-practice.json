@@ -1,0 +1,9 @@
+{
+	"name": "suraj-df-practice",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "36c0606a-c918-4ebd-9a65-0e16aa01d72d",
+		"tenantId": "d9429434-b2b6-4971-8d24-8ae67751f9c5"
+	}
+}
