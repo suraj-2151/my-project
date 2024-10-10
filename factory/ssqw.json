@@ -1,0 +1,9 @@
+{
+	"name": "ssqw",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "765885ed-c9f9-4cda-8973-6b4b48e3c222",
+		"tenantId": "e5231e8b-417e-452b-9df3-f60c7ddc18c7"
+	}
+}
