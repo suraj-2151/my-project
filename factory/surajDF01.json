@@ -1,0 +1,9 @@
+{
+	"name": "surajDF01",
+	"location": "uksouth",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "c8516918-1953-4287-85c2-3cea106f2789",
+		"tenantId": "073857e0-c59b-4fa6-ba77-46474193e39b"
+	}
+}
